@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Social Media SEO Dashboard</title>
+  
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Leaflet.js for map-style visualizations -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Animate.css for animations -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  
+  <style id="app-style">
+    body {
+      background-image: url('https://cdn.pixabay.com/photo/2016/11/29/10/07/forest-1867185_960_720.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background-color: rgba(255, 255, 255, 0.7);
+      z-index: -1;
+    }
+    
+    .platform-icon {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .youtube-icon {
+      background-color: #FF0000;
+      color: white;
+    }
+    
+    .instagram-icon {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      color: white;
+    }
+    
+    .recommendation-card {
+      border-left: 4px solid transparent;
+      transition: all 0.2s ease;
+    }
+    
+    .recommendation-card:hover {
+      border-left-color: #4F46E5;
+      transform: translateX(4px);
+    }
+    
+    .recommendation-card.youtube {
+      border-left-color: #FF0000;
+    }
+    
+    .recommendation-card.instagram {
+      border-left-color: #E1306C;
+    }
+    
+    #visualization-map {
+      height: 400px;
+      width: 100%;
+      border-radius: 0.5rem;
+    }
+    
+    .pulse-animation {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+      }
+    }
+    
+    .stat-card {
+      transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      border-radius: 0.5rem;
+    }
+    
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #4F46E5;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <header class="mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-indigo-600">Social Media SEO Dashboard</h1>
+          <p class="text-gray-600 mt-2">Track and optimize your social media presence</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+          <button id="refresh-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+            <i class="fas fa-sync-alt mr-2"></i> Refresh Data
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Input Form Section -->
+    <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Connect Your Channels</h2>
+      
+      <form id="channel-form" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- YouTube Input -->
+          <div>
+            <label for="youtube-input" class="block text-sm font-medium text-gray-700 mb-1">
+              <i class="fab fa-youtube text-red-600 mr-2"></i>YouTube Channel ID or URL
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 sm:text-sm">
+                  <i class="fas fa-link"></i>
+                </span>
+              </div>
+              <input
+                type="text"
+                id="youtube-input"
+                name="youtube-input"
+                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-3"
+                placeholder="Enter YouTube Channel ID or URL"
+              >
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <span id="youtube-validation" class="hidden">
+                  <i class="fas fa-check-circle text-green-500"></i>
+                </span>
+              </div>
+            </div>
+            <p id="youtube-error" class="mt-1 text-sm text-red-600 hidden">Please enter a valid YouTube channel ID or URL.</p>
+          </div>
+          
+          <!-- Instagram Input -->
+          <div>
+            <label for="instagram-input" class="block text-sm font-medium text-gray-700 mb-1">
+              <i class="fab fa-instagram text-pink-600 mr-2"></i>Instagram Username
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 sm:text-sm">
+                  @
+                </span>
+              </div>
+              <input
+                type="text"
+                id="instagram-input"
+                name="instagram-input"
+                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-3"
+                placeholder="Enter Instagram username"
+              >
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <span id="instagram-validation" class="hidden">
+                  <i class="fas fa-check-circle text-green-500"></i>
+                </span>
+              </div>
+            </div>
+            <p id="instagram-error" class="mt-1 text-sm text-red-600 hidden">Please enter a valid Instagram username.</p>
+          </div>
+        </div>
+        
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            id="submit-btn"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <i class="fas fa-chart-line mr-2"></i>
+            Analyze Channels
+          </button>
+        </div>
+      </form>
+    </section>
+    
+    <!-- Dashboard Content -->
+    <div id="dashboard-content" class="hidden">
+      <!-- Summary Header -->
+      <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Channel Overview</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Total Reach -->
+          <div class="stat-card bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
+            <p class="text-sm text-indigo-600 font-medium">Total Reach</p>
+            <p id="total-reach" class="text-2xl font-bold">--</p>
+            <div class="flex items-center mt-2">
+              <span id="reach-trend" class="text-green-500 text-sm flex items-center">
+                <i class="fas fa-arrow-up mr-1"></i>
+                <span>--</span>
+              </span>
+              <span class="text-gray-500 text-sm ml-1">vs last month</span>
+            </div>
+          </div>
+          <!-- YouTube Views & Subs -->
+          <div class="stat-card bg-gradient-to-br from-red-50 to-yellow-50 p-4 rounded-lg border border-red-100">
+            <p class="text-sm text-red-600 font-medium">YouTube Views</p>
+            <p id="youtube-views" class="text-2xl font-bold">--</p>
+            <p class="text-sm text-gray-500">Subscribers: <span id="youtube-subs">--</span></p>
+            <p class="text-xs text-gray-400 mt-2">Eligibility: <span id="youtube-eligibility">--</span></p>
+          </div>
+          <!-- Instagram Followers -->
+          <div class="stat-card bg-gradient-to-br from-pink-50 to-purple-50 p-4 rounded-lg border border-pink-100">
+            <p class="text-sm text-pink-600 font-medium">Instagram Followers</p>
+            <p id="insta-followers" class="text-2xl font-bold">--</p>
+            <p class="text-sm text-gray-500">Posts: <span id="insta-posts">--</span></p>
+            <p class="text-xs text-gray-400 mt-2">Eligibility: <span id="insta-eligibility">--</span></p>
+          </div>
+          <!-- Total Impressions -->
+          <div class="stat-card bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-100">
+            <p class="text-sm text-purple-600 font-medium">Total Impressions</p>
+            <p id="total-impressions" class="text-2xl font-bold">--</p>
+            <div class="flex items-center mt-2">
+              <span id="impressions-trend" class="text-green-500 text-sm flex items-center">
+                <i class="fas fa-arrow-up mr-1"></i>
+                <span>--</span>
+              </span>
+              <span class="text-gray-500 text-sm ml-1">vs last month</span>
+            </div>
+          </div>
+          
+          <!-- Average Engagement Rate -->
+          <div class="stat-card bg-gradient-to-br from-green-50 to-teal-50 p-4 rounded-lg border border-green-100">
+            <p class="text-sm text-green-600 font-medium">Avg. Engagement Rate</p>
+            <p id="avg-engagement" class="text-2xl font-bold">--</p>
+            <div class="flex items-center mt-2">
+              <span id="engagement-trend" class="text-red-500 text-sm flex items-center">
+                <i class="fas fa-arrow-down mr-1"></i>
+                <span>--</span>
+              </span>
+              <span class="text-gray-500 text-sm ml-1">vs last month</span>
+            </div>
+          </div>
+          
+          <!-- Top Keywords -->
+          <div class="stat-card bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-100">
+            <p class="text-sm text-yellow-600 font-medium">Top Ranking Keywords</p>
+            <p id="top-keywords" class="text-2xl font-bold">--</p>
+            <div class="flex items-center mt-2">
+              <span id="keywords-trend" class="text-green-500 text-sm flex items-center">
+                <i class="fas fa-arrow-up mr-1"></i>
+                <span>--</span>
+              </span>
+              <span class="text-gray-500 text-sm ml-1">new this month</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Main Dashboard Panels -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Left Panel: Visualization Map -->
+        <section class="bg-white rounded-lg shadow-md p-6 relative">
+          <h2 class="text-xl font-semibold mb-4">SEO & Reach Visualization</h2>
+          
+          <div class="mb-4">
+            <div class="flex space-x-2">
+              <button id="view-youtube" class="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-red-200 transition-colors">
+                <i class="fab fa-youtube mr-1"></i> YouTube
+              </button>
+              <button id="view-instagram" class="bg-pink-100 text-pink-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
+                <i class="fab fa-instagram mr-1"></i> Instagram
+              </button>
+              <button id="view-combined" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-indigo-200 transition-colors">
+                <i class="fas fa-globe mr-1"></i> Combined
+              </button>
+            </div>
+          </div>
+          
+          <div id="visualization-container" class="relative">
+            <div id="visualization-map"></div>
+            
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded-md">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Keyword Rankings</h3>
+                <div id="keyword-chart-container" style="height: 150px">
+                  <canvas id="keyword-chart"></canvas>
+                </div>
+              </div>
+              <div class="bg-gray-50 p-3 rounded-md">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Engagement Metrics</h3>
+                <div id="engagement-chart-container" style="height: 150px">
+                  <canvas id="engagement-chart"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <div id="map-loading" class="loading-overlay hidden">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Right Panel: Recommendations -->
+        <section class="bg-white rounded-lg shadow-md p-6 relative">
+          <h2 class="text-xl font-semibold mb-4">AI-Driven Recommendations</h2>
+          
+          <div id="recommendations-container" class="space-y-4 overflow-y-auto" style="max-height: 600px;">
+            <div class="flex items-center justify-center h-64">
+              <p class="text-gray-500 text-center">
+                Connect your channels to see personalized recommendations
+              </p>
+            </div>
+          </div>
+          
+          <div id="recommendations-loading" class="loading-overlay hidden">
+            <div class="spinner"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div id="empty-state" class="bg-white rounded-lg shadow-md p-8 text-center">
+      <img src="https://cdn.pixabay.com/photo/2018/11/13/21/43/instagram-3814051_960_720.png" alt="Social Media" class="w-48 h-48 mx-auto mb-4 opacity-75">
+      <h2 class="text-2xl font-bold text-gray-700 mb-2">Welcome to your SEO Dashboard</h2>
+      <p class="text-gray-500 max-w-lg mx-auto mb-6">
+        Track your social media SEO performance and get AI-powered recommendations to improve your reach and engagement.
+      </p>
+      <button 
+        id="get-started-btn" 
+        class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center pulse-animation"
+      >
+        <i class="fas fa-chart-line mr-2"></i>
+        Get Started
+      </button>
+    </div>
+  </div>
+
+  <script id="app-script">
+    // DOM Elements
+    const channelForm = document.getElementById('channel-form');
+    const youtubeInput = document.getElementById('youtube-input');
+    const instagramInput = document.getElementById('instagram-input');
+    const youtubeError = document.getElementById('youtube-error');
+    const instagramError = document.getElementById('instagram-error');
+    const youtubeValidation = document.getElementById('youtube-validation');
+    const instagramValidation = document.getElementById('instagram-validation');
+    const dashboardContent = document.getElementById('dashboard-content');
+    const emptyState = document.getElementById('empty-state');
+    const getStartedBtn = document.getElementById('get-started-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const mapLoading = document.getElementById('map-loading');
+    const recommendationsLoading = document.getElementById('recommendations-loading');
+    const recommendationsContainer = document.getElementById('recommendations-container');
+    
+    // Stats elements
+    const totalReachEl = document.getElementById('total-reach');
+    const totalImpressionsEl = document.getElementById('total-impressions');
+    const avgEngagementEl = document.getElementById('avg-engagement');
+    const topKeywordsEl = document.getElementById('top-keywords');
+    const reachTrendEl = document.getElementById('reach-trend');
+    const impressionsTrendEl = document.getElementById('impressions-trend');
+    const engagementTrendEl = document.getElementById('engagement-trend');
+    const keywordsTrendEl = document.getElementById('keywords-trend');
+    // New stats elements
+    const youtubeViewsEl = document.getElementById('youtube-views');
+    const youtubeSubsEl = document.getElementById('youtube-subs');
+    const youtubeEligibilityEl = document.getElementById('youtube-eligibility');
+    const instaFollowersEl = document.getElementById('insta-followers');
+    const instaPostsEl = document.getElementById('insta-posts');
+    const instaEligibilityEl = document.getElementById('insta-eligibility');
+    
+    // View buttons
+    const viewYoutubeBtn = document.getElementById('view-youtube');
+    const viewInstagramBtn = document.getElementById('view-instagram');
+    const viewCombinedBtn = document.getElementById('view-combined');
+    
+    // Initialize map
+    let map;
+    
+    // Store channel data
+    let channelData = {
+      youtube: null,
+      instagram: null
+    };
+    
+    // Initialize charts
+    let keywordChart;
+    let engagementChart;
+    
+    // Initialize the dashboard
+    function initDashboard() {
+      // Check localStorage for saved channels
+      const savedChannels = JSON.parse(localStorage.getItem('socialChannels')) || {};
+      
+      if (savedChannels.youtube || savedChannels.instagram) {
+        // Pre-fill the form
+        if (savedChannels.youtube) {
+          youtubeInput.value = savedChannels.youtube;
+          validateYoutubeInput();
+        }
+        
+        if (savedChannels.instagram) {
+          instagramInput.value = savedChannels.instagram;
+          validateInstagramInput();
+        }
+        
+        // Load the dashboard with saved data
+        showDashboard();
+        fetchData();
+      }
+      
+      // Initialize Leaflet map
+      map = L.map('visualization-map', {
+        center: [20, 0],
+        zoom: 2,
+        zoomControl: true,
+        attributionControl: false
+      });
+      
+      // Add custom tile layer (simple and light)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(map);
+      
+      // Initialize charts
+      initCharts();
+    }
+    
+    // Initialize charts
+    function initCharts() {
+      const keywordCtx = document.getElementById('keyword-chart').getContext('2d');
+      keywordChart = new Chart(keywordCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Rank 1-3', 'Rank 4-10', 'Rank 11-20', 'Rank 21-50', 'Rank 50+'],
+          datasets: [{
+            label: 'Keywords',
+            data: [0, 0, 0, 0, 0],
+            backgroundColor: [
+              'rgba(54, 162, 235, 0.6)',
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(255, 206, 86, 0.6)',
+              'rgba(255, 159, 64, 0.6)',
+              'rgba(255, 99, 132, 0.6)'
+            ],
+            borderColor: [
+              'rgba(54, 162, 235, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(255, 159, 64, 1)',
+              'rgba(255, 99, 132, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+      
+      const engagementCtx = document.getElementById('engagement-chart').getContext('2d');
+      engagementChart = new Chart(engagementCtx, {
+        type: 'line',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          datasets: [{
+            label: 'Engagement Rate',
+            data: [0, 0, 0, 0, 0, 0],
+            fill: false,
+            borderColor: 'rgba(153, 102, 255, 1)',
+            tension: 0.1,
+            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+    
+    // Validate YouTube input
+    function validateYoutubeInput() {
+      const value = youtubeInput.value.trim();
+      
+      if (!value) {
+        youtubeError.textContent = 'Please enter a YouTube channel ID or URL.';
+        youtubeError.classList.remove('hidden');
+        youtubeValidation.classList.add('hidden');
+        return false;
+      }
+      
+      // Simple validation for YouTube URLs or channel IDs
+      const youtubeUrlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(c\/|channel\/|user\/)|youtu\.be\/)/;
+      const channelIdPattern = /^UC[\w-]{21}[AQgw]$/;
+      
+      if (!youtubeUrlPattern.test(value) && !channelIdPattern.test(value)) {
+        youtubeError.textContent = 'Please enter a valid YouTube channel URL or ID.';
+        youtubeError.classList.remove('hidden');
+        youtubeValidation.classList.add('hidden');
+        return false;
+      }
+      
+      youtubeError.classList.add('hidden');
+      youtubeValidation.classList.remove('hidden');
+      return true;
+    }
+    
+    // Validate Instagram input
+    function validateInstagramInput() {
+      const value = instagramInput.value.trim();
+      
+      if (!value) {
+        instagramError.textContent = 'Please enter an Instagram username.';
+        instagramError.classList.remove('hidden');
+        instagramValidation.classList.add('hidden');
+        return false;
+      }
+      
+      // Simple validation for Instagram usernames
+      const instagramPattern = /^[a-zA-Z0-9._]{1,30}$/;
+      
+      if (!instagramPattern.test(value)) {
+        instagramError.textContent = 'Please enter a valid Instagram username.';
+        instagramError.classList.remove('hidden');
+        instagramValidation.classList.add('hidden');
+        return false;
+      }
+      
+      instagramError.classList.add('hidden');
+      instagramValidation.classList.remove('hidden');
+      return true;
+    }
+    
+    // Show dashboard content and hide empty state
+    function showDashboard() {
+      emptyState.classList.add('hidden');
+      dashboardContent.classList.remove('hidden');
+    }
+    
+    // Fetch data from API
+    function fetchData() {
+      const channels = {
+        youtube: youtubeInput.value.trim(),
+        instagram: instagramInput.value.trim()
+      };
+      
+      // Save to localStorage
+      localStorage.setItem('socialChannels', JSON.stringify(channels));
+      
+      // Show loading indicators
+      mapLoading.classList.remove('hidden');
+      recommendationsLoading.classList.remove('hidden');
+      
+      // Fetch YouTube data if provided
+      if (channels.youtube) {
+        fetchYoutubeData(channels.youtube);
+      }
+      
+      // Fetch Instagram data if provided
+      if (channels.instagram) {
+        fetchInstagramData(channels.instagram);
+      }
+      
+      // Update visualizations after "fetching" data
+      setTimeout(() => {
+        mapLoading.classList.add('hidden');
+        recommendationsLoading.classList.add('hidden');
+        updateDashboard();
+      }, 1500);
+    }
+    
+    // Fetch YouTube data
+    function fetchYoutubeData(channelId) {
+      // In the prototype, we'll use fake data
+      // This would be replaced with actual API calls
+      channelData.youtube = {
+        id: channelId,
+        metrics: {
+          reach: 125000,
+          impressions: 450000,
+          engagementRate: 4.2,
+          keywordsRanked: 42
+        },
+        keywordRankings: {
+          top3: 8,
+          top10: 15,
+          top20: 12,
+          top50: 7,
+          below50: 24
+        },
+        engagementTrend: [2.8, 3.1, 3.5, 3.8, 4.0, 4.2],
+        trendingKeywords: ['tutorial', 'review', 'guide', 'tips', 'how-to'],
+        growth: {
+          reach: 12.5,
+          impressions: 8.3,
+          engagementRate: -1.2,
+          keywordsRanked: 5
+        }
+      };
+    }
+    
+    // Fetch Instagram data
+    function fetchInstagramData(username) {
+      // In the prototype, we'll use fake data
+      // This would be replaced with actual API calls
+      channelData.instagram = {
+        username: username,
+        metrics: {
+          reach: 85000,
+          impressions: 320000,
+          engagementRate: 5.7,
+          keywordsRanked: 28
+        },
+        keywordRankings: {
+          top3: 5,
+          top10: 9,
+          top20: 8,
+          top50: 6,
+          below50: 15
+        },
+        engagementTrend: [4.1, 4.5, 4.8, 5.2, 5.5, 5.7],
+        trendingKeywords: ['lifestyle', 'fashion', 'travel', 'food', 'fitness'],
+        growth: {
+          reach: 15.2,
+          impressions: 10.8,
+          engagementRate: 3.5,
+          keywordsRanked: 7
+        }
+      };
+    }
+    
+    // Update dashboard with data
+    function updateDashboard() {
+      updateSummaryStats();
+      updateVisualizationMap();
+      updateCharts();
+      updateRecommendations();
+    }
+    
+    // Update summary statistics
+    function updateSummaryStats() {
+      let totalReach = 0;
+      let totalImpressions = 0;
+      let totalEngagement = 0;
+      let channelCount = 0;
+      let totalKeywords = 0;
+      // New: Reset new stats
+      youtubeViewsEl.textContent = '--';
+      youtubeSubsEl.textContent = '--';
+      youtubeEligibilityEl.textContent = '--';
+      instaFollowersEl.textContent = '--';
+      instaPostsEl.textContent = '--';
+      instaEligibilityEl.textContent = '--';
+      // YouTube metrics
+      if (channelData.youtube) {
+        totalReach += channelData.youtube.metrics.reach;
+        totalImpressions += channelData.youtube.metrics.impressions;
+        totalEngagement += channelData.youtube.metrics.engagementRate;
+        totalKeywords += channelData.youtube.metrics.keywordsRanked;
+        channelCount++;
+        // New: Show YouTube views, subs, eligibility
+        youtubeViewsEl.textContent = (channelData.youtube.metrics.views || 320000).toLocaleString();
+        youtubeSubsEl.textContent = (channelData.youtube.metrics.subscribers || 1800).toLocaleString();
+        // Example eligibility: 1000+ subs & 4000+ hours views
+        const ytEligible = (channelData.youtube.metrics.subscribers || 1800) >= 1000 && (channelData.youtube.metrics.views || 320000) >= 4000 ? 'Eligible for Monetization' : 'Not Eligible';
+        youtubeEligibilityEl.textContent = ytEligible;
+      }
+      // Instagram metrics
+      if (channelData.instagram) {
+        totalReach += channelData.instagram.metrics.reach;
+        totalImpressions += channelData.instagram.metrics.impressions;
+        totalEngagement += channelData.instagram.metrics.engagementRate;
+        totalKeywords += channelData.instagram.metrics.keywordsRanked;
+        channelCount++;
+        // New: Show Instagram followers, posts, eligibility
+        instaFollowersEl.textContent = (channelData.instagram.metrics.followers || 2500).toLocaleString();
+        instaPostsEl.textContent = (channelData.instagram.metrics.posts || 120).toLocaleString();
+        // Example eligibility: 1000+ followers
+        const instaEligible = (channelData.instagram.metrics.followers || 2500) >= 1000 ? 'Eligible for Creator Tools' : 'Not Eligible';
+        instaEligibilityEl.textContent = instaEligible;
+      }
+      
+      // Calculate averages
+      const avgEngagement = channelCount > 0 ? (totalEngagement / channelCount).toFixed(1) : 0;
+      
+      // Calculate growth trends
+      let reachGrowth = 0;
+      let impressionsGrowth = 0;
+      let engagementGrowth = 0;
+      let keywordsGrowth = 0;
+      
+      if (channelData.youtube) {
+        reachGrowth += channelData.youtube.growth.reach;
+        impressionsGrowth += channelData.youtube.growth.impressions;
+        engagementGrowth += channelData.youtube.growth.engagementRate;
+        keywordsGrowth += channelData.youtube.growth.keywordsRanked;
+      }
+      
+      if (channelData.instagram) {
+        reachGrowth += channelData.instagram.growth.reach;
+        impressionsGrowth += channelData.instagram.growth.impressions;
+        engagementGrowth += channelData.instagram.growth.engagementRate;
+        keywordsGrowth += channelData.instagram.growth.keywordsRanked;
+      }
+      
+      if (channelCount > 0) {
+        reachGrowth = (reachGrowth / channelCount).toFixed(1);
+        impressionsGrowth = (impressionsGrowth / channelCount).toFixed(1);
+        engagementGrowth = (engagementGrowth / channelCount).toFixed(1);
+        keywordsGrowth = Math.round(keywordsGrowth);
+      }
+      
+      // Update UI
+      totalReachEl.textContent = totalReach.toLocaleString();
+      totalImpressionsEl.textContent = totalImpressions.toLocaleString();
+      avgEngagementEl.textContent = avgEngagement + '%';
+      topKeywordsEl.textContent = totalKeywords;
+      
+      // Update trends
+      updateTrendIndicator(reachTrendEl, reachGrowth);
+      updateTrendIndicator(impressionsTrendEl, impressionsGrowth);
+      updateTrendIndicator(engagementTrendEl, engagementGrowth);
+      updateTrendIndicator(keywordsTrendEl, keywordsGrowth);
+    }
+    
+    // Helper to update trend indicators
+    function updateTrendIndicator(element, value) {
+      const valueSpan = element.querySelector('span');
+      const icon = element.querySelector('i');
+      
+      if (value > 0) {
+        element.className = 'text-green-500 text-sm flex items-center';
+        icon.className = 'fas fa-arrow-up mr-1';
+        valueSpan.textContent = `+${value}%`;
+      } else if (value < 0) {
+        element.className = 'text-red-500 text-sm flex items-center';
+        icon.className = 'fas fa-arrow-down mr-1';
+        valueSpan.textContent = `${value}%`;
+      } else {
+        element.className = 'text-gray-500 text-sm flex items-center';
+        icon.className = 'fas fa-minus mr-1';
+        valueSpan.textContent = '0%';
+      }
+    }
+    
+    // Update map visualization
+    function updateVisualizationMap() {
+      // Clear existing markers
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Marker || layer instanceof L.Circle) {
+          map.removeLayer(layer);
+        }
+      });
+      
+      // Add markers for keyword clusters
+      if (channelData.youtube) {
+        addPlatformMarkers('youtube');
+      }
+      
+      if (channelData.instagram) {
+        addPlatformMarkers('instagram');
+      }
+      
+      // Ensure the map is properly displayed
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    }
+    
+    // Add platform-specific markers to the map
+    function addPlatformMarkers(platform) {
+      const data = channelData[platform];
+      if (!data) return;
+      
+      // Create a "heat map" style visualization with circles
+      const locations = [
+        [37.7749, -122.4194], // San Francisco
+        [40.7128, -74.0060],  // New York
+        [51.5074, -0.1278],   // London
+        [35.6762, 139.6503],  // Tokyo
+        [19.4326, -99.1332],  // Mexico City
+        [-33.8688, 151.2093], // Sydney
+        [55.7558, 37.6173],   // Moscow
+        [48.8566, 2.3522],    // Paris
+        [-23.5505, -46.6333], // São Paulo
+        [28.6139, 77.2090]    // New Delhi
+      ];
+      
+      const platformColor = platform === 'youtube' ? '#FF0000' : '#E1306C';
+      const maxRadius = platform === 'youtube' ? 100000 : 80000;
+      
+      // Create markers with varying sizes based on metrics
+      locations.forEach((loc, i) => {
+        const sizeFactor = Math.random() * 0.8 + 0.2; // Random size between 0.2 and 1.0
+        const radius = maxRadius * sizeFactor;
+        
+        L.circle(loc, {
+          color: platformColor,
+          fillColor: platformColor,
+          fillOpacity: 0.2,
+          radius: radius
+        }).addTo(map);
+        
+        // Add platform icon marker
+        const icon = L.divIcon({
+          html: `<div class="platform-icon ${platform}-icon"><i class="fab fa-${platform}"></i></div>`,
+          className: '',
+          iconSize: [24, 24]
+        });
+        
+        L.marker(loc, { icon }).addTo(map)
+          .bindPopup(`
+            <div class="p-2">
+              <strong class="text-${platform === 'youtube' ? 'red' : 'pink'}-600">
+                ${platform === 'youtube' ? 'YouTube' : 'Instagram'} Hotspot
+              </strong>
+              <p class="text-sm text-gray-600 mt-1">
+                ${Math.round(sizeFactor * 100)}% of your audience
+              </p>
+              <div class="text-xs text-gray-500 mt-1">
+                Top keyword: ${data.trendingKeywords[i % data.trendingKeywords.length]}
+              </div>
+            </div>
+          `);
+      });
+      
+      // Fit map to markers
+      if (locations.length > 0) {
+        map.fitBounds(locations.map(loc => [loc[0], loc[1]]));
+      }
+    }
+    
+    // Update charts with data
+    function updateCharts() {
+      // Determine which data to show based on active view
+      let activeData;
+      
+      if (viewYoutubeBtn.classList.contains('bg-red-200')) {
+        activeData = channelData.youtube;
+      } else if (viewInstagramBtn.classList.contains('bg-pink-200')) {
+        activeData = channelData.instagram;
+      } else {
+        // Combined view - merge data
+        activeData = {
+          keywordRankings: {
+            top3: 0,
+            top10: 0,
+            top20: 0,
+            top50: 0,
+            below50: 0
+          },
+          engagementTrend: [0, 0, 0, 0, 0, 0]
+        };
+        
+        if (channelData.youtube) {
+          activeData.keywordRankings.top3 += channelData.youtube.keywordRankings.top3;
+          activeData.keywordRankings.top10 += channelData.youtube.keywordRankings.top10;
+          activeData.keywordRankings.top20 += channelData.youtube.keywordRankings.top20;
+          activeData.keywordRankings.top50 += channelData.youtube.keywordRankings.top50;
+          activeData.keywordRankings.below50 += channelData.youtube.keywordRankings.below50;
+          
+          for (let i = 0; i < 6; i++) {
+            activeData.engagementTrend[i] += channelData.youtube.engagementTrend[i] || 0;
+          }
+        }
+        
+        if (channelData.instagram) {
+          activeData.keywordRankings.top3 += channelData.instagram.keywordRankings.top3;
+          activeData.keywordRankings.top10 += channelData.instagram.keywordRankings.top10;
+          activeData.keywordRankings.top20 += channelData.instagram.keywordRankings.top20;
+          activeData.keywordRankings.top50 += channelData.instagram.keywordRankings.top50;
+          activeData.keywordRankings.below50 += channelData.instagram.keywordRankings.below50;
+          
+          for (let i = 0; i < 6; i++) {
+            activeData.engagementTrend[i] += channelData.instagram.engagementTrend[i] || 0;
+          }
+          
+          // Average the engagement trends for combined view
+          if (channelData.youtube) {
+            for (let i = 0; i < 6; i++) {
+              activeData.engagementTrend[i] /= 2;
+            }
+          }
+        }
+      }
+      
+      if (activeData) {
+        // Update keyword chart
+        keywordChart.data.datasets[0].data = [
+          activeData.keywordRankings.top3,
+          activeData.keywordRankings.top10,
+          activeData.keywordRankings.top20,
+          activeData.keywordRankings.top50,
+          activeData.keywordRankings.below50
+        ];
+        keywordChart.update();
+        
+        // Update engagement chart
+        engagementChart.data.datasets[0].data = activeData.engagementTrend;
+        engagementChart.update();
+      }
+    }
+    
+    // Update recommendations
+    function updateRecommendations() {
+      recommendationsContainer.innerHTML = '';
+      
+      if (!channelData.youtube && !channelData.instagram) {
+        recommendationsContainer.innerHTML = `
+          <div class="flex items-center justify-center h-64">
+            <p class="text-gray-500 text-center">
+              Connect your channels to see personalized recommendations
+            </p>
+          </div>
+        `;
+        return;
+      }
+      
+      // YouTube recommendations
+      if (channelData.youtube) {
+        const youtubeRecommendations = [
+          {
+            title: "Optimize your video titles with top keywords",
+            description: "Include keywords like 'tutorial' and 'how-to' in your titles to improve search rankings.",
+            metric: "Could improve impressions by 15-25%",
+            difficulty: "easy"
+          },
+          {
+            title: "Create more content around trending topics",
+            description: "Your audience is showing interest in 'review' content. Consider creating more review videos.",
+            metric: "Potential 30% increase in reach",
+            difficulty: "medium"
+          },
+          {
+            title: "Improve your thumbnail click-through rate",
+            description: "Your thumbnails have a lower CTR than similar channels. Try using brighter colors and clear text.",
+            metric: "Could improve CTR by 8-12%",
+            difficulty: "medium"
+          },
+          {
+            title: "Increase your upload frequency",
+            description: "Channels in your niche posting 2x per week see higher engagement than your current schedule.",
+            metric: "Potential 20% growth in subscribers",
+            difficulty: "hard"
+          }
+        ];
+        
+        youtubeRecommendations.forEach(rec => {
+          addRecommendationCard(rec, 'youtube');
+        });
+      }
+      
+      // Instagram recommendations
+      if (channelData.instagram) {
+        const instagramRecommendations = [
+          {
+            title: "Use more targeted hashtags",
+            description: "Replace generic hashtags with more specific ones related to your niche for better discoverability.",
+            metric: "Could increase reach by 35%",
+            difficulty: "easy"
+          },
+          {
+            title: "Post more Reels content",
+            description: "Reels get 22% more engagement than regular posts for accounts in your category.",
+            metric: "Potential 40% boost in engagement",
+            difficulty: "medium"
+          },
+          {
+            title: "Collaborate with similar creators",
+            description: "We identified 5 potential collaboration partners that share your audience demographics.",
+            metric: "Could gain 1,000-2,500 new followers",
+            difficulty: "medium"
+          },
+          {
+            title: "Optimize posting schedule",
+            description: "Your audience is most active at times different from when you typically post.",
+            metric: "Potential 15% increase in engagement",
+            difficulty: "easy"
+          }
+        ];
+        
+        instagramRecommendations.forEach(rec => {
+          addRecommendationCard(rec, 'instagram');
+        });
+      }
+    }
+    
+    // Add a recommendation card to the container
+    function addRecommendationCard(recommendation, platform) {
+      const difficultyColors = {
+        easy: 'bg-green-100 text-green-800',
+        medium: 'bg-yellow-100 text-yellow-800',
+        hard: 'bg-red-100 text-red-800'
+      };
+      
+      const platformIcon = platform === 'youtube' 
+        ? '<i class="fab fa-youtube text-red-600"></i>' 
+        : '<i class="fab fa-instagram text-pink-600"></i>';
+      
+      const card = document.createElement('div');
+      card.className = `recommendation-card ${platform} bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all`;
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <h3 class="text-base font-medium text-gray-900">${recommendation.title}</h3>
+          <span class="flex-shrink-0 ml-2">${platformIcon}</span>
+        </div>
+        <p class="mt-2 text-sm text-gray-600">${recommendation.description}</p>
+        <div class="mt-3 flex justify-between items-center">
+          <span class="text-xs ${difficultyColors[recommendation.difficulty]} px-2 py-1 rounded-full">
+            ${recommendation.difficulty.charAt(0).toUpperCase() + recommendation.difficulty.slice(1)}
+          </span>
+          <span class="text-xs font-medium text-indigo-600">${recommendation.metric}</span>
+        </div>
+      `;
+      
+      recommendationsContainer.appendChild(card);
+    }
+    
+    // Event Listeners
+    youtubeInput.addEventListener('input', validateYoutubeInput);
+    instagramInput.addEventListener('input', validateInstagramInput);
+    
+    channelForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const youtubeValid = validateYoutubeInput();
+      const instagramValid = validateInstagramInput();
+      
+      if (youtubeValid || instagramValid) {
+        showDashboard();
+        fetchData();
+      }
+    });
+    
+    getStartedBtn.addEventListener('click', function() {
+      emptyState.classList.add('hidden');
+      channelForm.scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    refreshBtn.addEventListener('click', function() {
+      fetchData();
+    });
+    
+    // View toggle buttons
+    viewYoutubeBtn.addEventListener('click', function() {
+      viewYoutubeBtn.classList.add('bg-red-200');
+      viewYoutubeBtn.classList.remove('bg-red-100');
+      
+      viewInstagramBtn.classList.remove('bg-pink-200');
+      viewInstagramBtn.classList.add('bg-pink-100');
+      
+      viewCombinedBtn.classList.remove('bg-indigo-200');
+      viewCombinedBtn.classList.add('bg-indigo-100');
+      
+      updateVisualizationMap();
+      updateCharts();
+    });
+    
+    viewInstagramBtn.addEventListener('click', function() {
+      viewInstagramBtn.classList.add('bg-pink-200');
+      viewInstagramBtn.classList.remove('bg-pink-100');
+      
+      viewYoutubeBtn.classList.remove('bg-red-200');
+      viewYoutubeBtn.classList.add('bg-red-100');
+      
+      viewCombinedBtn.classList.remove('bg-indigo-200');
+      viewCombinedBtn.classList.add('bg-indigo-100');
+      
+      updateVisualizationMap();
+      updateCharts();
+    });
+    
+    viewCombinedBtn.addEventListener('click', function() {
+      viewCombinedBtn.classList.add('bg-indigo-200');
+      viewCombinedBtn.classList.remove('bg-indigo-100');
+      
+      viewYoutubeBtn.classList.remove('bg-red-200');
+      viewYoutubeBtn.classList.add('bg-red-100');
+      
+      viewInstagramBtn.classList.remove('bg-pink-200');
+      viewInstagramBtn.classList.add('bg-pink-100');
+      
+      updateVisualizationMap();
+      updateCharts();
+    });
+    
+    // Initialize dashboard on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set combined view as default
+      viewCombinedBtn.classList.add('bg-indigo-200');
+      viewCombinedBtn.classList.remove('bg-indigo-100');
+      
+      initDashboard();
+    });
+  </script>
+</body>
+</html>
