@@ -22,7 +22,4 @@ A simple and efficient YouTube video utility tool that helps you enhance your co
 - 🧠 JavaScript (Vanilla)
 - 🌐 GitHub Pages (for deployment)
 
----
-
-## 📁 Folder Structure
 
